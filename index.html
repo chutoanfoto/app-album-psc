@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+
+<html lang="vi">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>ChutoanFoto Album Pro</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Cinzel:wght@700&family=Great+Vibes&display=swap" rel="stylesheet">
+
+<style>
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body { font-family: 'Montserrat', sans-serif; background: #121212; color: #fff; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+
+.header { background: #1a1a1a; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; z-index: 100; flex-shrink: 0; }
+
+.logo-area { display: flex; align-items: center; gap: 12px; }
+
+.logo-icon { width: 36px; height: 36px; background: #d4af37; color: #000; display: flex; justify-content: center; align-items: center; font-family: 'Playfair Display', serif; font-size: 20px; font-weight: bold; border-radius: 6px; }
+
+.logo-text h1 { font-size: 16px; letter-spacing: 2px; }
+
+.logo-text p { font-size: 10px; color: #888; }
+
+.btn-export { background: #d4af37; color: #000; border: none; padding: 8px 20px; font-size: 13px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+
+.btn-export:hover { background: #e5c358; }
+
+
+.container { display: flex; flex: 1; overflow: hidden; position: relative; }
+
+.sidebar { width: 320px; background: #1a1a1a; border-right: 1px solid #333; display: flex; flex-direction: column; flex-shrink: 0; z-index: 20; }
+
+.sidebar-title { padding: 16px 20px; font-size: 11px; font-weight: bold; color: #888; letter-spacing: 2px; border-bottom: 1px solid #333; }
+
+.template-list { padding: 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+
+.sidebar-footer { padding: 16px; background: #111; font-size: 11px; color: #777; line-height: 1.6; border-top: 1px solid #333; }
+
+
+.tpl-btn { background: #222; border: 2px solid transparent; border-radius: 8px; cursor: pointer; transition: 0.2s; overflow: hidden; }
+
+.tpl-btn:hover, .tpl-btn.active { border-color: #d4af37; }
+
+.tpl-btn-preview { height: 75px; display: flex; align-items: center; justify-content: center; background: #2a2a2a; }
+
+.tpl-btn-name { padding: 10px; font-size: 12px; font-weight: bold; text-align: center; background: #151515; color: #ddd; }
+
+
+.workspace { flex: 1; background-color: #202020; background-image: radial-gradient(#3a3a3a 1px, transparent 0); background-size: 20px 20px; display: flex; justify-content: center; align-items: flex-start; position: relative; overflow: auto; padding: 40px 20px; }
+
+
+.zoom-controls { position: fixed; bottom: 24px; right: 24px; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; display: flex; align-items: center; overflow: hidden; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+
+.zoom-controls button { background: transparent; border: none; color: #fff; padding: 8px 14px; cursor: pointer; font-size: 15px; }
+
+.zoom-controls button:hover { background: #333; }
+
+.zoom-controls span { padding: 0 12px; font-size: 12px; font-family: monospace; border-left: 1px solid #333; border-right: 1px solid #333; }
+
+
+#canvas-wrapper { transform-origin: top center; transition: transform 0.1s ease-out; flex-shrink: 0; }
+
+#export-canvas { width: 1080px; height: 1920px; background: #fff; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.7); overflow: hidden; }
+
+
+[contenteditable="true"] { outline: none; cursor: text; transition: 0.2s; display: inline-block; }
+
+[contenteditable="true"]:hover { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4); border-radius: 4px; background: rgba(255,255,255,0.08); }
+
+[contenteditable="true"]:focus { box-shadow: inset 0 0 0 1px #d4af37; background: rgba(0,0,0,0.6); }
+
+
+.dropzone { background-color: #2b2b2b; background-size: cover; background-position: center; cursor: pointer; display: flex; align-items: center; justify-content: center; position: relative; transition: background 0.3s; }
+
+.dropzone::before { content: "+ Thêm ảnh"; font-size: 22px; color: rgba(255,255,255,0.35); pointer-events: none; }
+
+.dropzone.has-img::before { display: none; }
+
+.dropzone:hover::after { content: "Đổi ảnh"; position: absolute; background: rgba(0,0,0,0.75); color: #fff; padding: 8px 18px; border-radius: 4px; font-size: 16px; z-index: 50; pointer-events: none; }
+
+
+.f-serif { font-family: 'Playfair Display', serif; }
+
+.f-sans { font-family: 'Montserrat', sans-serif; }
+
+.f-script { font-family: 'Great Vibes', cursive; }
+
+.f-cinzel { font-family: 'Cinzel', serif; }
+
+
+/* MẪU 1: VIEWFINDER */
+
+.t1-wrap { width: 100%; height: 100%; position: relative; background: #111; color: #fff; }
+
+.t1-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+
+.t1-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; padding: 100px; pointer-events: none; }
+
+.t1-overlay [contenteditable="true"] { pointer-events: auto; }
+
+.t1-brackets { position: absolute; top: 120px; left: 100px; right: 100px; bottom: 420px; pointer-events: none; }
+
+.t1-brackets::before, .t1-brackets::after { content: ''; position: absolute; width: 70px; height: 70px; border: 5px solid #e02424; }
+
+.t1-brackets::before { top: 0; left: 0; border-right: none; border-bottom: none; }
+
+.t1-brackets::after { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+.t1-brackets-2::before, .t1-brackets-2::after { content: ''; position: absolute; width: 70px; height: 70px; border: 5px solid #e02424; }
+
+.t1-brackets-2::before { top: 0; right: 0; border-left: none; border-bottom: none; }
+
+.t1-brackets-2::after { bottom: 0; left: 0; border-right: none; border-top: none; }
+
+.t1-center-text { text-align: center; margin-top: auto; margin-bottom: 180px; text-shadow: 2px 2px 8px rgba(0,0,0,0.8); }
+
+.t1-title { font-size: 130px; font-weight: bold; letter-spacing: 5px; margin: 30px 0; }
+
+
+/* MẪU 2: LƯỚI & LỊCH ĐỎ */
+
+.t2-wrap { width: 100%; height: 100%; background: #4a1515; padding: 60px; display: flex; flex-direction: column; }
+
+.t2-header { text-align: center; color: #fff; letter-spacing: 15px; font-size: 22px; margin-bottom: 35px; }
+
+.t2-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: repeat(3, 1fr); gap: 16px; margin-bottom: 40px; }
+
+.t2-col { background: #222; }
+
+.t2-text-box { display: flex; align-items: center; justify-content: center; flex-direction: column; color: #fff; letter-spacing: 10px; font-size: 24px; text-align: center; writing-mode: vertical-rl; transform: rotate(180deg); }
+
+.t2-footer { text-align: center; color: #fff; }
+
+.t2-month { font-size: 30px; letter-spacing: 18px; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 16px; margin-bottom: 35px; display: inline-block; }
+
+.t2-days { display: flex; justify-content: center; gap: 45px; font-size: 34px; align-items: center; font-weight: bold; }
+
+.t2-active-day { background: #e02424; width: 75px; height: 75px; display: flex; justify-content: center; align-items: center; border-radius: 50%; }
+
+
+
+/* MẪU 3: TẠP CHÍ ĂN HỎI */
+
+.t3-wrap { width: 100%; height: 100%; background: #252622; padding: 60px; display: flex; flex-direction: column; color: #e5e5e5; }
+
+.t3-header { text-align: center; margin-bottom: 35px; }
+
+.t3-title { font-size: 135px; color: #d4af37; margin: 0; line-height: 1; letter-spacing: 8px; }
+
+.t3-body { display: flex; gap: 20px; flex: 1; }
+
+.t3-left { width: 40%; display: flex; flex-direction: column; gap: 20px; }
+
+.t3-right { width: 60%; background: #333; }
+
+.t3-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 35px; }
+
+.t3-badge { width: 110px; height: 110px; border: 2px solid #d4af37; display: flex; justify-content: center; align-items: center; color: #d4af37; font-size: 45px; }
+
+
+
+/* MẪU 4: DẢI PHIM & LỊCH */
+
+.t4-wrap { width: 100%; height: 100%; position: relative; background: #222; display: flex; flex-direction: column; }
+
+.t4-bg { position: absolute; width: 100%; height: 100%; filter: blur(35px) brightness(0.65); z-index: 1; }
+
+.t4-content { position: relative; z-index: 10; flex: 1; display: flex; flex-direction: column; align-items: center; padding: 80px 40px; pointer-events: none; }
+
+.t4-content [contenteditable="true"], .t4-content .dropzone { pointer-events: auto; }
+
+.t4-date { color: #fff; font-size: 32px; letter-spacing: 25px; margin-bottom: 70px; }
+
+.t4-strip { display: flex; gap: 20px; width: 100%; height: 750px; margin-bottom: 70px; }
+
+.t4-frame { flex: 1; background: #ddd; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+
+.t4-cal-area { width: 100%; max-width: 800px; text-align: center; color: #fff; }
+
+.t4-month { font-size: 34px; letter-spacing: 15px; margin-bottom: 35px; }
+
+.t4-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 22px; font-size: 24px; text-align: center; }
+
+.t4-cal-day { padding: 14px; }
+
+.t4-cal-day.active { background: #e02424; border-radius: 8px; font-weight: bold; }
+
+
+
+/* MẪU 5: 3 CỘT (AN HỎI) */
+
+.t5-wrap { width: 100%; height: 100%; position: relative; background: #2b1b17; padding: 90px 80px; display: flex; flex-direction: column; justify-content: space-between; }
+
+.t5-bg { position: absolute; top:0; left:0; width: 100%; height: 100%; filter: blur(25px) brightness(0.35); z-index: 1; }
+
+.t5-content { position: relative; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; height: 100%; pointer-events: none; }
+
+.t5-content [contenteditable="true"], .t5-content .dropzone { pointer-events: auto; }
+
+.t5-top { display: flex; justify-content: space-between; font-size: 20px; letter-spacing: 6px; font-weight: 300; color: #fff; }
+
+.t5-grid { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 26px; height: 1050px; margin-top: 30px; }
+
+.t5-col { height: 850px; align-self: center; }
+
+.t5-col.center { height: 1050px; box-shadow: 0 20px 45px rgba(0,0,0,0.85); z-index: 5; }
+
+.t5-date { position: absolute; top: 35px; width: 100%; text-align: center; color: white; letter-spacing: 10px; font-size: 22px; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); z-index: 20; }
+
+.t5-bottom { text-align: center; margin-top: 20px; }
+
+.t5-subtitle { font-size: 20px; letter-spacing: 14px; color: #aaa; margin-bottom: 18px; font-weight: 300; }
+
+.t5-title { font-size: 160px; color: #e59e74; line-height: 1; letter-spacing: -2px; margin-bottom: 25px; }
+
+.t5-names { font-size: 28px; letter-spacing: 12px; color: #ccc; font-weight: 300; }
+
+</style>
+
+</head>
+
+<body>
+
+
+
+<header class="header">
+
+<div class="logo-area">
+
+<div class="logo-icon">S</div>
+
+<div class="logo-text">
+
+<h1>CHUTOANFOTO</h1>
+
+<p>ALBUM MAKER PRO</p>
+
+</div>
+
+</div>
+
+<button id="btn-export" class="btn-export">TẢI ẢNH (HD)</button>
+
+</header>
+
+
+
+<div class="container">
+
+<aside class="sidebar">
+
+<div class="sidebar-title">DANH SÁCH MẪU</div>
+
+<div class="template-list">
+
+<div class="tpl-btn active" data-template="tpl-view">
+
+<div class="tpl-btn-preview" style="color: #e02424; font-size: 28px; font-weight: bold;">[ + ]</div>
+
+<div class="tpl-btn-name">1. MẪU VIEWFINDER</div>
+
+</div>
+
+<div class="tpl-btn" data-template="tpl-gridcal">
+
+<div class="tpl-btn-preview">
+
+<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; width: 45px; height: 45px;">
+
+<div style="background:#fff"></div><div style="background:#fff"></div><div style="background:#fff"></div>
+
+<div style="background:#fff"></div><div style="background:#d4af37"></div><div style="background:#fff"></div>
+
+<div style="background:#fff"></div><div style="background:#fff"></div><div style="background:#fff"></div>
+
+</div>
+
+</div>
+
+<div class="tpl-btn-name">2. LƯỚI & LỊCH ĐỎ</div>
+
+</div>
+
+<div class="tpl-btn" data-template="tpl-magazine">
+
+<div class="tpl-btn-preview">
+
+<div style="display:flex; gap: 3px; width: 45px; height: 50px;">
+
+<div style="width: 40%; display:flex; flex-direction:column; gap:3px;"><div style="flex:1; background:#fff;"></div><div style="flex:1; background:#fff;"></div></div>
+
+<div style="width: 60%; background:#fff;"></div>
+
+</div>
+
+</div>
+
+<div class="tpl-btn-name">3. TẠP CHÍ ĂN HỎI</div>
+
+</div>
+
+<div class="tpl-btn" data-template="tpl-film">
+
+<div class="tpl-btn-preview">
+
+<div style="display:flex; gap: 3px; width: 50px; height: 40px;">
+
+<div style="flex:1; background:#fff;"></div><div style="flex:1; background:#fff;"></div><div style="flex:1; background:#fff;"></div>
+
+</div>
+
+</div>
+
+<div class="tpl-btn-name">4. DẢI PHIM & LỊCH</div>
+
+</div>
+
+<div class="tpl-btn" data-template="tpl-3col">
+
+<div class="tpl-btn-preview">
+
+<div style="display:flex; gap: 3px; width: 50px; height: 45px; align-items: center;">
+
+<div style="flex:1; height: 35px; background:#888;"></div>
+
+<div style="flex:1.2; height: 45px; background:#fff;"></div>
+
+<div style="flex:1; height: 35px; background:#888;"></div>
+
+</div>
+
+</div>
+
+<div class="tpl-btn-name">5. BA CỘT (AN HỎI)</div>
+
+</div>
+
+</div>
+
+<div class="sidebar-footer">
+
+• Click trực tiếp vào khung để nạp ảnh.<br>
+
+• Click đúp vào chữ để sửa văn bản.<br>
+
+• Xuất chuẩn kích thước Story 1080x1920.
+
+</div>
+
+</aside>
+
+
+
+<main class="workspace" id="workspace">
+
+<div class="zoom-controls">
+
+<button id="btn-zoom-out">-</button>
+
+<span id="zoom-level">100%</span>
+
+<button id="btn-zoom-in">+</button>
+
+</div>
+
+<div id="canvas-wrapper">
+
+<div id="export-canvas"></div>
+
+</div>
+
+</main>
+
+</div>
+
+
+
+<input type="file" id="image-upload" accept="image/*" style="display: none;">
+
+
+
+<!-- KHO LƯU TEMPLATES -->
+
+<div id="templates-store" style="display: none;">
+
+<!-- TPL 1 -->
+
+<div id="tpl-view">
+
+<div class="t1-wrap f-sans">
+
+<div class="dropzone t1-img" data-type="img"></div>
+
+<div class="t1-overlay">
+
+<div class="t1-brackets"><div class="t1-brackets-2"></div></div>
+
+<div style="display: flex; justify-content: space-between; font-size: 20px; letter-spacing: 8px;">
+
+<span contenteditable="true">FLOWERS AND TIE</span>
+
+<span contenteditable="true">MULBERRY KNOT</span>
+
+<span contenteditable="true">AND MUSIC</span>
+
+</div>
+
+<div class="t1-center-text">
+
+<div class="t1-title" contenteditable="true">SS STUDIO</div>
+
+<div style="font-size: 24px; letter-spacing: 12px; margin-bottom: 50px; text-align: right;" contenteditable="true">WEDDING FILM</div>
+
+<div style="font-size: 20px; font-style: italic; margin-bottom: 10px;" contenteditable="true">From</div>
+
+<div class="f-script" style="font-size: 100px; margin-bottom: 15px;" contenteditable="true">Bắc Ninh</div>
+
+<div class="f-serif" style="font-size: 55px; margin-bottom: 25px;" contenteditable="true">Ngọc Lan & Minh Hội</div>
+
+<div style="font-size: 20px; letter-spacing: 15px; margin-bottom: 70px;" contenteditable="true">08 . 08 . 2026</div>
+
+<div style="font-size: 14px; line-height: 2; letter-spacing: 3px; color: #ccc;" contenteditable="true">
+
+WE FRAMED THIS MORNING AND KEPT WHAT WAS INSIDE<br>
+
+THE REST OF THE WORLD WENT QUIETLY GREY<br>
+
+A KNOT OF SILK, A SPRIG OF MULBERRY, A PROMISE
+
+</div>
+
+</div>
+
+<div style="display: flex; justify-content: space-between; font-size: 24px; letter-spacing: 10px;">
+
+<span contenteditable="true">WISH YOU</span>
+
+<span contenteditable="true">A HAPPY</span>
+
+<span contenteditable="true">WEDDING</span>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<!-- TPL 2 -->
+
+<div id="tpl-gridcal">
+
+<div class="t2-wrap f-sans">
+
+<div class="t2-header" contenteditable="true">WEDDING FILM</div>
+
+<div class="t2-grid">
+
+<div class="dropzone t2-col" data-type="img"></div>
+
+<div class="dropzone t2-col" data-type="img"></div>
+
+<div class="dropzone t2-col" data-type="img"></div>
+
+<div class="dropzone t2-col" data-type="img"></div>
+
+<div class="t2-text-box" contenteditable="true">
+
+<div>SS STUDIO</div>
+
+<div style="font-weight: 300; font-size: 18px; margin-top:20px; color:#aaa;">WEDDING PHOTOGRAPHER</div>
+
+</div>
+
+<div class="dropzone t2-col" data-type="img"></div>
+
+<div class="dropzone t2-col" data-type="img"></div>
+
+<div class="dropzone t2-col" data-type="img"></div>
+
+<div class="dropzone t2-col" data-type="img"></div>
+
+</div>
+
+<div class="t2-footer">
+
+<div class="t2-month" contenteditable="true">AUGUST . 2026</div>
+
+<div class="t2-days" contenteditable="true">
+
+<span>4</span> <span>5</span> <span>6</span> <span>7</span>
+
+<span class="t2-active-day">8</span>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<!-- TPL 3 -->
+
+<div id="tpl-magazine">
+
+<div class="t3-wrap f-sans">
+
+<div class="t3-header">
+
+<h1 class="t3-title f-cinzel" contenteditable="true">LỄ ĂN HỎI</h1>
+
+<p class="f-script" style="font-size: 50px; color: #fff;" contenteditable="true">Huyền Trang & Quang Linh</p>
+
+</div>
+
+<div class="t3-body">
+
+<div class="t3-left">
+
+<div class="dropzone" style="flex: 1;" data-type="img"></div>
+
+<div class="dropzone" style="flex: 1;" data-type="img"></div>
+
+</div>
+
+<div class="dropzone t3-right" data-type="img"></div>
+
+</div>
+
+<div class="t3-footer">
+
+<div style="font-size: 20px; letter-spacing: 15px; color: #888;" contenteditable="true">WISH YOU</div>
+
+<div class="t3-badge f-serif">HỶ</div>
+
+<div>
+
+<h2 style="font-size: 35px; color: #d4af37; margin-bottom: 8px;" contenteditable="true">LỄ ĂN HỎI SANG TRỌNG</h2>
+
+<p style="color: #aaa; font-size: 18px;" contenteditable="true">#LEANHOITRUYENTHONG</p>
+
+</div>
+
+<div style="writing-mode: vertical-rl; transform: rotate(180deg); text-align: right;">
+
+<div style="font-size: 55px; font-weight: bold; color: #d4af37; margin-bottom: 12px;" contenteditable="true">1999 MEDIA</div>
+
+<div style="font-size: 18px; letter-spacing: 5px;" contenteditable="true">Wedding Film</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<!-- TPL 4 -->
+
+<div id="tpl-film">
+
+<div class="t4-wrap f-sans">
+
+<div class="dropzone t4-bg" data-type="bg"></div>
+
+<div class="t4-content">
+
+<div class="t4-date" contenteditable="true">07 . 08 . 2026</div>
+
+<div class="t4-strip">
+
+<div class="dropzone t4-frame" data-type="img"></div>
+
+<div class="dropzone t4-frame" data-type="img"></div>
+
+<div class="dropzone t4-frame" data-type="img"></div>
+
+</div>
+
+<div style="font-size: 26px; letter-spacing: 15px; margin-bottom: 50px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); color:#fff;" contenteditable="true">1999 MEDIA WEDDING FILM</div>
+
+<div class="t4-cal-area">
+
+<div class="t4-month" contenteditable="true">AUGUST . 2026</div>
+
+<div class="t4-cal-grid" contenteditable="true">
+
+<div class="t4-cal-day">1</div><div class="t4-cal-day">2</div><div class="t4-cal-day">3</div><div class="t4-cal-day">4</div><div class="t4-cal-day">5</div><div class="t4-cal-day">6</div><div class="t4-cal-day active">7</div>
+
+<div class="t4-cal-day">8</div><div class="t4-cal-day">9</div><div class="t4-cal-day">10</div><div class="t4-cal-day">11</div><div class="t4-cal-day">12</div><div class="t4-cal-day">13</div><div class="t4-cal-day">14</div>
+
+<div class="t4-cal-day">15</div><div class="t4-cal-day">16</div><div class="t4-cal-day">17</div><div class="t4-cal-day">18</div><div class="t4-cal-day">19</div><div class="t4-cal-day">20</div><div class="t4-cal-day">21</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<!-- TPL 5 -->
+
+<div id="tpl-3col">
+
+<div class="t5-wrap f-sans">
+
+<div class="dropzone t5-bg" data-type="bg"></div>
+
+<div class="t5-content">
+
+<div class="t5-top">
+
+<span contenteditable="true">WEDDING FILM</span>
+
+<span contenteditable="true">AN HOI</span>
+
+</div>
+
+<div class="t5-grid">
+
+<div class="t5-col dropzone" data-type="img"></div>
+
+<div class="t5-col center dropzone relative" data-type="img">
+
+<div class="t5-date font-sans" contenteditable="true">20.09.2026</div>
+
+</div>
+
+<div class="t5-col dropzone" data-type="img"></div>
+
+</div>
+
+<div class="t5-bottom">
+
+<div class="t5-subtitle" contenteditable="true">HÔM NAY ĂN GÌ ?</div>
+
+<div class="t5-title f-serif" contenteditable="true">AN HOI</div>
+
+<div class="t5-names font-sans" contenteditable="true">NHUNG & TUẤN</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<script>
+
+document.addEventListener('DOMContentLoaded', () => {
+
+const canvasWrapper = document.getElementById('canvas-wrapper');
+
+const canvas = document.getElementById('export-canvas');
+
+const fileInput = document.getElementById('image-upload');
+
+const workspace = document.getElementById('workspace');
+
+const zoomText = document.getElementById('zoom-level');
+
+let currentDropzone = null;
+
+let currentScale = 0.45;
+
+
+
+function applyScale() {
+
+canvasWrapper.style.transform = `scale(${currentScale})`;
+
+zoomText.textContent = Math.round(currentScale * 100) + '%';
+
+}
+
+
+
+function autoFit() {
+
+const availableHeight = workspace.clientHeight - 80;
+
+currentScale = Math.min(Math.max(availableHeight / 1920, 0.25), 1);
+
+applyScale();
+
+}
+
+
+
+autoFit();
+
+window.addEventListener('resize', autoFit);
+
+
+
+document.getElementById('btn-zoom-in').onclick = () => {
+
+currentScale = Math.min(currentScale + 0.05, 1.5);
+
+applyScale();
+
+};
+
+document.getElementById('btn-zoom-out').onclick = () => {
+
+currentScale = Math.max(currentScale - 0.05, 0.2);
+
+applyScale();
+
+};
+
+
+
+function initDropzones() {
+
+canvas.querySelectorAll('.dropzone').forEach(zone => {
+
+zone.onclick = (e) => {
+
+if (e.target.hasAttribute('contenteditable')) return;
+
+currentDropzone = zone;
+
+fileInput.click();
+
+};
+
+});
+
+}
+
+
+
+document.querySelectorAll('.tpl-btn').forEach(btn => {
+
+btn.onclick = () => {
+
+const tplId = btn.getAttribute('data-template');
+
+canvas.innerHTML = document.getElementById(tplId).innerHTML;
+
+initDropzones();
+
+document.querySelectorAll('.tpl-btn').forEach(b => b.classList.remove('active'));
+
+btn.classList.add('active');
+
+};
+
+});
+
+
+
+document.querySelector('[data-template="tpl-view"]').click();
+
+
+
+// Đọc ảnh bằng FileReader Base64 chống lỗi Tainted Canvas
+
+fileInput.onchange = (e) => {
+
+if (e.target.files && e.target.files[0] && currentDropzone) {
+
+const reader = new FileReader();
+
+reader.onload = (event) => {
+
+currentDropzone.style.backgroundImage = `url("${event.target.result}")`;
+
+currentDropzone.classList.add('has-img');
+
+if (currentDropzone.getAttribute('data-type') === 'img') {
+
+currentDropzone.style.backgroundColor = 'transparent';
+
+}
+
+};
+
+reader.readAsDataURL(e.target.files[0]);
+
+}
+
+fileInput.value = '';
+
+};
+
+
+
+// Xuất ảnh JPG
+
+document.getElementById('btn-export').onclick = async () => {
+
+const btn = document.getElementById('btn-export');
+
+const oldText = btn.textContent;
+
+btn.textContent = 'ĐANG XỬ LÝ...';
+
+
+
+const tempScale = currentScale;
+
+currentScale = 1;
+
+applyScale();
+
+
+
+try {
+
+await new Promise(r => setTimeout(r, 300));
+
+const canvasData = await html2canvas(canvas, {
+
+scale: 1,
+
+useCORS: true,
+
+allowTaint: true,
+
+backgroundColor: null
+
+});
+
+
+
+const link = document.createElement('a');
+
+link.download = `ChutoanFoto_${Date.now()}.jpg`;
+
+link.href = canvasData.toDataURL('image/jpeg', 0.95);
+
+link.click();
+
+} catch (err) {
+
+alert('Lỗi xuất ảnh: ' + err.message);
+
+} finally {
+
+currentScale = tempScale;
+
+applyScale();
+
+btn.textContent = oldText;
+
+}
+
+};
+
+
+
+canvas.onkeydown = (e) => {
+
+if (e.target.hasAttribute('contenteditable') && e.key === 'Enter') {
+
+if (window.getComputedStyle(e.target).lineHeight === 'normal' || parseInt(window.getComputedStyle(e.target).fontSize) > 28) {
+
+e.preventDefault();
+
+e.target.blur();
+
+}
+
+}
+
+};
+
+});
+
+</script>
+
+</body>
+
+</html>
+
